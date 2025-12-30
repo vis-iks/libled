@@ -158,7 +158,6 @@ Sound& Resources::GetSound(const char* filename) const
 		std::cout << "Sound with filename '" << filename << "' was not found." << std::endl;
 		FAIL("File not found");
 	}
-	std::cout << "Sound with filename '" << filename << "' found." << std::endl;
 	return *(result->second);
 }
 
