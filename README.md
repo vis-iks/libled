@@ -1,5 +1,7 @@
 # LibLed
 
+![](demo/gifs/demo.gif)
+
 LibLed is a lightweight C++ library designed for creating rich graphical and audio applications, specifically tailored for LED matrix displays (via `rpi-rgb-led-matrix`) and desktop development (via X11).
 
 ## Features

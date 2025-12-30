@@ -37,7 +37,7 @@ X11Graphics::X11Graphics(const Configuration& cfg) :
 	// Setup window and GC
 	window = XCreateSimpleWindow(display, DefaultRootWindow(display), 20, 20,
 		DISPLAY_WIDTH * DOT_SIZE + WINDOW_BORDER * 2, DISPLAY_HEIGHT * DOT_SIZE + WINDOW_BORDER * 2, WINDOW_BORDER, white, black);
-	XSetStandardProperties(display, window, "Pandemic", "HI!", None, NULL, 0, NULL);
+	XSetStandardProperties(display, window, "LibLED", "HI!", None, NULL, 0, NULL);
 	XSelectInput(display, window, ExposureMask|ButtonPressMask|KeyPressMask);
 	gc = XCreateGC(display, window, 0, 0);
 	XSetBackground(display, gc, white);
