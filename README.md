@@ -41,7 +41,7 @@ A collection of ready-to-use visual effects for dynamic displays.
 ### Prerequisites
 
 - **X11 Development Headers**: Required for desktop simulation.
-- **FMOD Library**: The library includes FMOD in `external/fmodstudioapi20311linux`.
+- **FMOD Library**: The library includes FMOD in `external/fmodstudioapi`.
 
 ### Building
 The library and demo are built using CMake. 
@@ -59,7 +59,6 @@ The demo is built in the `build/demo` directory. It requires a `configuration.to
 A helper script or a one-liner can be used:
 
 ```bash
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$(pwd)/external/fmodstudioapi20311linux/api/core/lib/x86_64
 ./build/demo/Demo
 ```
 
