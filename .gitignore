@@ -37,3 +37,7 @@ libled.a
 build/
 bin/
 lib/
+
+external/fmodstudioapi20311linux/
+
+
