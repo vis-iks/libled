@@ -303,7 +303,7 @@ int main(int argc, char* argv[])
 
     try {
         for (int i = 0; ; ++i) {
-            uint32_t timeMs = i * 50; // 20FPS
+            uint32_t timeMs = i * 25; // 20FPS
             
             // Input
             int key = graphics.GetKey();
@@ -329,7 +329,7 @@ int main(int argc, char* argv[])
             }
             
             graphics.Present(false);
-            usleep(50000); 
+            usleep(25000); 
         }
     } catch (const std::exception& ex) {
         std::cerr << "Error: " << ex.what() << std::endl;
