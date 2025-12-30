@@ -1,0 +1,39 @@
+# --- CMake Build Artifacts (The mess) ---
+CMakeFiles/
+CMakeCache.txt
+CMakeScratch/
+CMakeConfigureLog.yaml
+cmake_install.cmake
+Makefile
+install_manifest.txt
+pkgRedirects/
+progress.marks
+TargetDirectories.txt
+cmake.check_cache
+generated/
+
+# --- Compiled Binaries & Libraries ---
+*.a
+*.lib
+*.o
+*.so
+*.dll
+*.dylib
+*.exe
+
+# --- Specific Binaries from your tree ---
+# Assuming 'demo/Demo' is your executable
+demo/Demo
+libled.a
+
+# --- OS & Editor Clutter ---
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- Ignore the build directory (for future clean builds) ---
+build/
+bin/
+lib/
