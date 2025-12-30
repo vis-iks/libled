@@ -41,3 +41,7 @@ lib/
 external/fmodstudioapi20311linux/
 
 
+
+# Allow FMOD libraries
+!external/fmodstudioapi/lib/
+!external/fmodstudioapi/lib/**
