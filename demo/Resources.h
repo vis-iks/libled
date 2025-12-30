@@ -21,6 +21,7 @@ class Graphics;
 class Resources final
 {
 private:
+	static Resources* instance;
 
 
 	// Resources
@@ -56,5 +57,7 @@ public:
 	const Font& BoldBits() { return *boldbits; }
 	const Font& BoldBitsLarge() { return *boldbitslarge; }
 	const Font& Smallest() { return *smallest; }
+
+	static Resources& GetResources();
 };
 

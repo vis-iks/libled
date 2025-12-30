@@ -1,4 +1,5 @@
 #include "HotShotEffect.h"
+#include "Resources.h"
 #include <utils/ShaderUtils.h>
 #include "Shaders.h"
 #include <utils/Configuration.h>
@@ -34,6 +35,7 @@ void HotShotEffect::Render(Canvas& canvas, uint32_t timeMs)
     if (!started) {
         startTime = timeMs;
         started = true;
+        Resources::GetResources().GetSound("hotshot.wav").Play();
     }
     
     uint32_t elapsed = timeMs - startTime;

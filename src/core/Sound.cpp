@@ -49,7 +49,12 @@ Sound::~Sound()
 void Sound::Play(bool loop)
 {
     FMOD::System* sys = Audio::GetSystemInstance();
-    if (sys && sound)
+    if (!sys)
+    {
+        std::cout << "Failed to play sound: " << sound << std::endl;
+        return;
+    }
+    if (sound)
     {
         sys->playSound(sound, nullptr, true, &channel);
         if (channel)
@@ -66,6 +71,9 @@ void Sound::Play(bool loop)
             }
             channel->setPaused(false);
         }
+    }
+    else {
+        std::cout << "Failed to play sound: " << sound << std::endl;
     }
 }
 

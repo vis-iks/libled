@@ -64,3 +64,10 @@ A helper script or a one-liner can be used:
 
 ### Configuration
 LibLed uses a configuration file (typically `configuration.toml`) to set up display parameters (resolution, chain length, brightness) and audio settings. The demo looks for it in its own directory.
+
+#### Acknowledgements
+Many thanks to the authors of the following libraries:
+- [`Pandemic`](https://github.com/klapstoelpiloot/pandemic) for the Pandemic library.
+- [`GLM`](https://github.com/g-truc/glm) for the math utilities.
+- [`rpi-rgb-led-matrix`](https://github.com/hzeller/rpi-rgb-led-matrix) for the LED matrix support.
+- [`FMOD`](https://www.fmod.com/) for the audio support.

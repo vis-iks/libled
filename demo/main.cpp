@@ -22,7 +22,9 @@
 #include "ImpressiveDemo.h"
 #include "ExcellentDemo.h"
 #include <effects/PixelShaderEffect.h>
+#include <effects/PixelShaderEffect.h>
 #include <X11/keysym.h>
+#include <core/Audio.h>
 
 using namespace libled;
 
@@ -115,7 +117,7 @@ void AddParticleScenes(std::vector<Scene>& scenes, const Image* fallingPixelSour
 
 void AddTextScenes(std::vector<Scene>& scenes, const Font& font, int width, int height) {
     Text text(font, HorizontalAlign::Center, VerticalAlign::Middle);
-    text.SetText("HELLO WORLD");
+    text.SetText("HELLO!");
     
     // Typewriter
     auto typewriter = std::make_shared<TypewriterEffect>(text, Color(0, 255, 0), 200);
@@ -261,6 +263,7 @@ int main(int argc, char* argv[])
     }
     
     Configuration config;
+    Audio audio(config);
     Graphics graphics(config, true);
     Canvas& canvas = graphics.GetCanvas();
     Resources resources(config, graphics);
@@ -303,7 +306,7 @@ int main(int argc, char* argv[])
 
     try {
         for (int i = 0; ; ++i) {
-            uint32_t timeMs = i * 25; // 20FPS
+            uint32_t timeMs = i * 25;
             
             // Input
             int key = graphics.GetKey();
@@ -312,10 +315,12 @@ int main(int argc, char* argv[])
                     currentScene--;
                     if (currentScene < 0) currentScene = scenes.size() - 1;
                     std::cout << "Switching to: " << scenes[currentScene].name << std::endl;
+                    Resources::GetResources().GetSound("woosh.wav").Play();
                 } else if (key == XK_Right) {
                     currentScene++;
                     if (currentScene >= (int)scenes.size()) currentScene = 0;
                      std::cout << "Switching to: " << scenes[currentScene].name << std::endl;
+                    Resources::GetResources().GetSound("woosh.wav").Play();
                 } else if (key == XK_Escape) {
                     break;
                 }

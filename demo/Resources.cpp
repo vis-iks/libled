@@ -3,8 +3,11 @@
 
 #include "utils/File.h"
 
+Resources* Resources::instance = nullptr;
+
 Resources::Resources(const Configuration& config, Graphics& graphics)
 {
+	instance = this;
 	graphics.ClearRenderers();
 
 	std::cout << "Loading resources... " << std::endl;
@@ -92,6 +95,8 @@ Resources::Resources(const Configuration& config, Graphics& graphics)
 
 Resources::~Resources()
 {
+	instance = nullptr;
+
 	// Unload music
 	for(MusicMap::value_type& mus : music)
 		delete mus.second;
@@ -153,6 +158,7 @@ Sound& Resources::GetSound(const char* filename) const
 		std::cout << "Sound with filename '" << filename << "' was not found." << std::endl;
 		FAIL("File not found");
 	}
+	std::cout << "Sound with filename '" << filename << "' found." << std::endl;
 	return *(result->second);
 }
 
@@ -198,4 +204,14 @@ void Resources::CopyFilenamesByExtension(vector<String>& input, vector<String>& 
 		if(String::ToLower(File::GetExtension(filename)) == extlowercase)
 			output.push_back(filename);
 	}
+}
+
+Resources& Resources::GetResources()
+{
+if(instance == nullptr)
+{
+std::cerr << "FATAL: Resources instance accessed before creation!" << std::endl;
+exit(1);
+}
+return *instance;
 }
