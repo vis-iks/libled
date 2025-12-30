@@ -38,25 +38,30 @@ A collection of ready-to-use visual effects for dynamic displays.
 
 ## Usage
 
+### Prerequisites
+
+- **X11 Development Headers**: Required for desktop simulation.
+- **FMOD Library**: The library includes FMOD in `external/fmodstudioapi20311linux`.
+
 ### Building
-The library is built using CMake. You can build it as a standalone project, which will also compile the included demo application.
+The library and demo are built using CMake. 
 
 ```bash
 mkdir build
 cd build
 cmake ..
-make
+make -j$(nproc)
 ```
 
 ### Running the Demo
-The `apps/demo` project serves as a comprehensive example of how to use LibLed.
+The demo is built in the `build/demo` directory. It requires a `configuration.toml` file (automatically copied to the build directory) and needs the FMOD shared library to be in the library search path.
 
-To run the demo, you must ensure that a `configuration.toml` configuration file is present in the execution directory.
-
+A helper script or a one-liner can be used:
 
 ```bash
-./build/apps/demo
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$(pwd)/external/fmodstudioapi20311linux/api/core/lib/x86_64
+./build/demo/Demo
 ```
 
 ### Configuration
-LibLed uses a configuration file (typically `configuration.toml`) to set up display parameters (resolution, chain length, brightness) and audio settings.
+LibLed uses a configuration file (typically `configuration.toml`) to set up display parameters (resolution, chain length, brightness) and audio settings. The demo looks for it in its own directory.
