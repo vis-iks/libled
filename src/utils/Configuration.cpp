@@ -21,5 +21,21 @@ Configuration::Configuration(const String& configFilename)
     }
 
 	// Read general settings
-	datapath = toml.GetString("General.DataPath", procdir);
+    String rawDataPath = toml.GetString("General.DataPath", procdir);
+
+    if (File::IsPathRelative(rawDataPath.c_str()))
+    {
+        // If the config has a relative path (e.g. "../assets"), combine it 
+        // with the process directory to create an absolute path.
+        datapath = File::CombinePath(procdir.c_str(), rawDataPath.c_str());
+        
+        // Recommended: Clean up the path (resolves "/bin/../assets" to "/assets")
+        // You will need to add the GetCanonicalPath function below to use this.
+        datapath = File::GetCanonicalPath(datapath); 
+    }
+    else
+    {
+        // It is already absolute, use it as is.
+        datapath = rawDataPath;
+    }
 }

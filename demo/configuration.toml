@@ -1,5 +1,5 @@
 [General]
-DataPath = "/home/visiks/Documents/Projects/pandemic/Pandemic/assets"
+DataPath = "../../demo/assets"
 
 [Display]
 Width = 128

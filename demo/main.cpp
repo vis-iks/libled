@@ -208,42 +208,28 @@ std::shared_ptr<AnimatedImage> AddAnimationScenes(std::vector<Scene>& scenes, co
     scenes.push_back({"HotShot", std::make_shared<HotShotEffect>(font)});
     
     // GIFs
-    auto gif = std::make_shared<AnimatedImage>();
-    if (gif->LoadGif("assets/test.gif")) {
-        scenes.push_back({"GIF Animation", std::make_shared<AnimationEffect>(gif)});
-    }
+    auto gif = resources.GetGif("test.gif");
+    scenes.push_back({"GIF Animation", std::make_shared<AnimationEffect>(gif)});
     
-    auto pacman = std::make_shared<AnimatedImage>();
-    if (pacman->LoadGif("assets/pacman.gif")) {
-        pacman->SetTransparentColor(Color(0, 0, 0));
-        
-        auto bgSparks = std::make_shared<ParticleSystemEffect>();
-        bgSparks->SetBaseColor(Color(100, 200, 255)); 
-        bgSparks->SetGravity(true);
-        
-        auto pacmanEffect = std::make_shared<AnimationEffect>(pacman);
-        scenes.push_back({"Pacman + Sparks", std::make_shared<CompositeEffect>(bgSparks, pacmanEffect)});
-    }
+    auto pacman = resources.GetGif("pacman.gif");
+    pacman->SetTransparentColor(Color(0, 0, 0));
     
-    auto transitionGif = std::make_shared<AnimatedImage>();
-    if (transitionGif->LoadGif("assets/transition.gif")) {
-        transitionGif->SetTransparentColor(Color(0, 0, 0));
-        auto bgSparks = std::make_shared<ParticleSystemEffect>();
-        bgSparks->SetBaseColor(Color(100, 200, 255)); 
-        bgSparks->SetGravity(true);
-        auto transEffect = std::make_shared<AnimationEffect>(transitionGif);
-        scenes.push_back({"Transition GIF", std::make_shared<CompositeEffect>(bgSparks, transEffect)});
-    }
+    auto bgSparks = std::make_shared<ParticleSystemEffect>();
+    bgSparks->SetBaseColor(Color(100, 200, 255)); 
+    bgSparks->SetGravity(true);
+    
+    auto pacmanEffect = std::make_shared<AnimationEffect>(pacman);
+    scenes.push_back({"Pacman + Sparks", std::make_shared<CompositeEffect>(bgSparks, pacmanEffect)});
+    
+    auto transitionGif = resources.GetGif("transition.gif");
+    transitionGif->SetTransparentColor(Color(0, 0, 0));
+    auto transEffect = std::make_shared<AnimationEffect>(transitionGif);
+    scenes.push_back({"Transition GIF", std::make_shared<CompositeEffect>(bgSparks, transEffect)});
 
-    auto cubeGif = std::make_shared<AnimatedImage>();
-    if (cubeGif->LoadGif("assets/cube_rotate.gif")) {
-        cubeGif->SetTransparentColor(Color(0, 0, 0));
-        auto bgSparks = std::make_shared<ParticleSystemEffect>();
-        bgSparks->SetBaseColor(Color(100, 200, 255)); 
-        bgSparks->SetGravity(true);
-        auto cubeEffect = std::make_shared<AnimationEffect>(cubeGif);
-        scenes.push_back({"Cube GIF", std::make_shared<CompositeEffect>(bgSparks, cubeEffect)});
-    }
+    auto cubeGif = resources.GetGif("cube_rotate.gif");
+    cubeGif->SetTransparentColor(Color(0, 0, 0));
+    auto cubeEffect = std::make_shared<AnimationEffect>(cubeGif);
+    scenes.push_back({"Cube GIF", std::make_shared<CompositeEffect>(bgSparks, cubeEffect)});
     
     return pacman;
 }

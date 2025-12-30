@@ -220,3 +220,21 @@ String File::GetCurrentProcessDir()
 		pathstr.Append("/");
 	return pathstr;
 }
+
+// Resolves relative segments like ".." and "." to return a clean absolute path
+String File::GetCanonicalPath(const String& pathfilename)
+{
+    REQUIRE(pathfilename.c_str() != nullptr);
+    
+    std::error_code ec;
+    // weakly_canonical is preferred over canonical because it does not throw 
+    // if the file/folder doesn't exist yet (useful for creating new output dirs).
+    path p = weakly_canonical(path(pathfilename.c_str()), ec);
+    
+    if (ec) {
+        // Fallback: if filesystem fails, return original
+        return pathfilename;
+    }
+    
+    return String(p.c_str());
+}

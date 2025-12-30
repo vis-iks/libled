@@ -22,8 +22,10 @@ Image::Image(int w, int h) : Image()
     width = w;
     height = h;
     hascolors = true;
-    data = new byte[w * h * 4];
-    memset(data, 0, w * h * 4);
+    data = (byte*)malloc(w * h * 4);
+    if (data) {
+        memset(data, 0, w * h * 4);
+    }
 }
 
 void Image::SetPixel(int x, int y, Color c)

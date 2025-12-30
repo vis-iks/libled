@@ -12,17 +12,19 @@ Resources::Resources(const Configuration& config, Graphics& graphics)
 	// Find all files in the data path
 	vector<String> allfiles;
 	String datapath = config.DataPath();
+	std::cout << "Data path: " << datapath << std::endl;
 	bool result = File::GetFiles(datapath, allfiles);
 	ENSURE(result);
 
 	// Make lists of the files we want to load.
 	// We use these lists to load resources by type.
-	vector<String> ddsfiles, fntfiles, wavfiles, mp3files, anifiles;
+	vector<String> ddsfiles, fntfiles, wavfiles, mp3files, anifiles, giffiles;
 	CopyFilenamesByExtension(allfiles, ddsfiles, ".dds");
 	CopyFilenamesByExtension(allfiles, fntfiles, ".fnt");
 	CopyFilenamesByExtension(allfiles, wavfiles, ".wav");
 	CopyFilenamesByExtension(allfiles, mp3files, ".mp3");
 	CopyFilenamesByExtension(allfiles, anifiles, ".ani");
+	CopyFilenamesByExtension(allfiles, giffiles, ".gif");
 
 	// Load music
 	for(const String& filename : mp3files)
@@ -69,6 +71,18 @@ Resources::Resources(const Configuration& config, Graphics& graphics)
 		Animation* ani = new Animation(filename, &img);
 		animations.insert(AnimationsMap::value_type(name, ani));
 	}
+    
+    // Load GIFs
+    for(const String& filename : giffiles)
+    {
+        String name = File::GetFileName(filename);
+        auto gif = std::make_shared<libled::AnimatedImage>();
+        if (gif->LoadGif(filename)) {
+            gifs.insert(GifsMap::value_type(name, gif));
+        } else {
+            std::cerr << "Failed to load GIF: " << filename << std::endl;
+        }
+    }
 
 	// Make shortcuts for common resources
 	boldbits = &GetFont("boldbits.fnt");
@@ -102,6 +116,9 @@ Resources::~Resources()
 	for(AnimationsMap::value_type& ani : animations)
 		delete ani.second;
 	animations.clear();
+
+	// Unload gifs
+	gifs.clear();
 
 }
 
@@ -159,6 +176,17 @@ const Animation& Resources::GetAni(const char* filename) const
 		FAIL("File not found");
 	}
 	return *(result->second);
+}
+
+std::shared_ptr<libled::AnimatedImage> Resources::GetGif(const char* filename) const
+{
+	auto result = gifs.find(std::string(filename));
+	if(result == gifs.cend())
+	{
+		std::cout << "GIF with filename '" << filename << "' was not found." << std::endl;
+		FAIL("File not found");
+	}
+	return result->second;
 }
 
 // This copies all filenames from input to output which match the specified extension

@@ -53,4 +53,7 @@ public:
 	// This returns the directory of the calling process.
 	// The string ends with a forward slash.
 	static String GetCurrentProcessDir();
+
+	// Returns the canonical path of the specified path
+	static String GetCanonicalPath(const String& pathfilename);
 };
