@@ -248,7 +248,8 @@ static float Grid(glm::vec2 uv, float battery, float time) {
   glm::vec2 size = glm::vec2(uv.y, uv.y * uv.y * 0.2f) * 0.025f;
 
   // Scale UVs to reduce grid density (make cells larger)
-  uv *= 0.2f;
+  // Increased from 0.2 to 0.6 to show more horizontal lines per user request
+  uv *= 0.3f;
 
   // Reduced speed from 4.0f to 0.5f to match the zoomed-in scale
   // Negated time to reverse direction (lines move towards center/horizon)
@@ -268,7 +269,7 @@ Color GridShader(float u, float v, float time) {
   // Fade to center logic (Y-axis): Darken center, brighten edges
   // Center of screen (y=0) is dark, edges are bright
   // Adjusted to 0.2->0.8 to create a wider dark band in the center
-  float fade = glm::smoothstep(0.2f, 0.8f, std::abs(uv.y));
+  float fade = glm::smoothstep(0.4f, 0.9f, std::abs(uv.y));
 
   float battery = 1.0f;
 
