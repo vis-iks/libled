@@ -4,9 +4,9 @@
 
 /**
  * Demo shader collection
- * These are specific visual effects for the demo, not core library functionality
+ * These are specific visual effects for the demo, not core library
+ * functionality
  */
-
 
 // Sine ripple shader - circular wave patterns
 Color SineShader(float u, float v, float time);
@@ -20,3 +20,5 @@ Color FireShader(float u, float v, float time);
 // Voronoi shader - cellular noise patterns
 Color VoronoiShader(float u, float v, float time);
 
+// Grid shader - retro vaporwave styles
+Color GridShader(float u, float v, float time);
