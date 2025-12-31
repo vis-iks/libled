@@ -272,13 +272,20 @@ Color GridShader(float u, float v, float time) {
 
   float battery = 1.0f;
 
-  float fog = glm::smoothstep(0.1f, -0.02f, std::abs(uv.y + 0.2f));
+  // Adjusted fog to be symmetric around 0.0 (horizon)
+  float fog = glm::smoothstep(0.1f, -0.02f, std::abs(uv.y));
   glm::vec3 col = glm::vec3(0.0f, 0.1f, 0.2f);
 
-  if (uv.y < -0.2f) {
-    uv.y = 3.0f / (std::abs(uv.y + 0.2f) + 0.05f);
-    uv.x *= uv.y * 1.0f;
-    float gridVal = Grid(uv, battery, time);
+  // Render grid if we are far enough from the center horizon
+  if (std::abs(uv.y) > 0.05f) {
+    // Use abs(uv.y) for symmetric perspective projection on top and bottom
+    float projectedY = 3.0f / (std::abs(uv.y) + 0.05f);
+
+    glm::vec2 gridUV = uv;
+    gridUV.y = projectedY;
+    gridUV.x *= gridUV.y * 1.0f;
+
+    float gridVal = Grid(gridUV, battery, time);
     col = glm::mix(col, glm::vec3(1.0f, 0.5f, 1.0f), gridVal);
   }
 
