@@ -87,6 +87,90 @@ public:
   }
 };
 
+// Star Parallax Effect for Grid Composition
+class StarParallaxEffect : public IEffect {
+  struct Star {
+    float x, y;
+    float speed;
+    float brightness;
+    int size;
+  };
+
+  std::vector<Star> stars;
+  uint32_t lastUpdate;
+  int bandHeight;
+  int screenWidth, screenHeight;
+
+public:
+  StarParallaxEffect(int count, int width, int height, int visibleBandHeight)
+      : lastUpdate(0), bandHeight(visibleBandHeight), screenWidth(width),
+        screenHeight(height) {
+    stars.resize(count);
+    int centerY = height / 2;
+    int halfBand = bandHeight / 2;
+
+    for (auto &star : stars) {
+      InitStar(star, true); // Random x
+    }
+  }
+
+  void InitStar(Star &star, bool randomX) {
+    star.x = randomX ? (float)(rand() % screenWidth)
+                     : -5.0f; // Start off-screen left if not random
+
+    // Random Y within center band
+    int centerY = screenHeight / 2;
+    int halfBand = bandHeight / 2;
+    star.y = (float)(centerY - halfBand + (rand() % bandHeight));
+
+    // Parallax: Faster stars are brighter and sometimes larger
+    float speedFactor = (float)(rand() % 100) / 100.0f; // 0.0 to 1.0
+    star.speed = 10.0f + speedFactor * 40.0f;           // 10 to 50 pixels/sec
+
+    star.brightness = 0.3f + speedFactor * 0.7f; // Brighter if faster
+    star.size = (speedFactor > 0.8f && (rand() % 5 == 0))
+                    ? 2
+                    : 1; // Occasional large star
+  }
+
+  void Render(Canvas &canvas, uint32_t timeMs) override {
+    if (lastUpdate == 0) {
+      lastUpdate = timeMs;
+      return;
+    }
+
+    float dt = (timeMs - lastUpdate) / 1000.0f;
+    lastUpdate = timeMs;
+
+    for (auto &star : stars) {
+      // Update position (Left to Right)
+      star.x += star.speed * dt;
+
+      // Wrap around
+      if (star.x > screenWidth) {
+        InitStar(star, false);
+      }
+
+      // Draw
+      int ix = (int)star.x;
+      int iy = (int)star.y;
+
+      byte b = (byte)(star.brightness * 255.0f);
+      Color c(b, b, b);
+
+      if (star.size == 1) {
+        canvas.SetPixel(ix, iy, c);
+      } else {
+        // Draw small cross or 2x2 for larger stars
+        canvas.SetPixel(ix, iy, c);
+        canvas.SetPixel(ix + 1, iy, c);
+        canvas.SetPixel(ix, iy + 1, c);
+        canvas.SetPixel(ix + 1, iy + 1, c);
+      }
+    }
+  }
+};
+
 // --- Scene Setup Functions ---
 
 void AddBasicScenes(std::vector<Scene> &scenes) {
@@ -189,7 +273,12 @@ void AddShaderScenes(std::vector<Scene> &scenes,
   scenes.push_back({"Fire", std::make_shared<PixelShaderEffect>(FireShader)});
   scenes.push_back(
       {"Voronoi", std::make_shared<PixelShaderEffect>(VoronoiShader)});
-  scenes.push_back({"Grid", std::make_shared<PixelShaderEffect>(GridShader)});
+
+  // Grid + Stars Composite
+  auto grid = std::make_shared<PixelShaderEffect>(GridShader);
+  auto stars = std::make_shared<StarParallaxEffect>(
+      40, DISPLAY_WIDTH, DISPLAY_HEIGHT, 14); // 40 stars, 14px band
+  scenes.push_back({"Grid", std::make_shared<CompositeEffect>(grid, stars)});
 
   // Flash Effect (on source)
   if (sourceForEffects) {
