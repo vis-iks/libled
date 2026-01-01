@@ -1,87 +1,85 @@
 #include "utils/Font.h"
+#include "stb_truetype.h"
 #include "utils/File.h"
 
-
 // Helper to get texture filename
-String Font::GetTextureFilename(const String& filename)
-{
-	String fontinfo = File::ReadAsText(filename);
-	vector<String> lines;
-	fontinfo.Split(lines, '\n');
+String Font::GetTextureFilename(const String &filename) {
+  String fontinfo = File::ReadAsText(filename);
+  vector<String> lines;
+  fontinfo.Split(lines, '\n');
 
-    // Expected format check could be here
-    if (lines.size() < 3) return "";
+  // Expected format check could be here
+  if (lines.size() < 3)
+    return "";
 
-	char imagefilename[256];
-	int scancount = std::sscanf(lines[2], "page id=0 file=%255s", imagefilename);
-    if (scancount != 1) return "";
+  char imagefilename[256];
+  int scancount = std::sscanf(lines[2], "page id=0 file=%255s", imagefilename);
+  if (scancount != 1)
+    return "";
 
-	String cleanimagefilename = imagefilename;
-	cleanimagefilename.Replace("\"", "");
-    return cleanimagefilename;
+  String cleanimagefilename = imagefilename;
+  cleanimagefilename.Replace("\"", "");
+  return cleanimagefilename;
 }
 
 // Constructor
-Font::Font(const String& filename, const Image* img) :
-	image(img),
-	lineheight(0),
-	linebase(0)
-{
-	// Read the font file as text and split into lines
-	String fontinfo = File::ReadAsText(filename);
-	vector<String> lines;
-	fontinfo.Split(lines, '\n');
+Font::Font(const String &filename, const Image *img)
+    : image(img), lineheight(0), linebase(0) {
+  // Read the font file as text and split into lines
+  String fontinfo = File::ReadAsText(filename);
+  vector<String> lines;
+  fontinfo.Split(lines, '\n');
 
-	// Parse general font information
-	int scancount = std::sscanf(lines[1], "common lineHeight=%i base=%i", &lineheight, &linebase);
-	ENSURE(scancount == 2);
+  // Parse general font information
+  int scancount = std::sscanf(lines[1], "common lineHeight=%i base=%i",
+                              &lineheight, &linebase);
+  ENSURE(scancount == 2);
 
-	// Parse character information
-	int numchars, ln = 3;
-	scancount = std::sscanf(lines[ln++], "chars count=%i", &numchars);
-	ENSURE(scancount == 1);
-	for(int i = 0; i < numchars; i++)
-	{
-		FontChar fc;
-		uint id;
-		scancount = std::sscanf(lines[ln++], "char id=%i x=%i y=%i width=%i height=%i xoffset=%i yoffset=%i xadvance=%i",
-			&id, &fc.imgrect.x, &fc.imgrect.y, &fc.imgrect.width, &fc.imgrect.height, &fc.offset.x, &fc.offset.y, &fc.advance);
-		ENSURE(scancount == 8);
-		charmap.insert(FontCharPair(id, fc));
-	}
+  // Parse character information
+  int numchars, ln = 3;
+  scancount = std::sscanf(lines[ln++], "chars count=%i", &numchars);
+  ENSURE(scancount == 1);
+  for (int i = 0; i < numchars; i++) {
+    FontChar fc;
+    uint id;
+    scancount = std::sscanf(lines[ln++],
+                            "char id=%i x=%i y=%i width=%i height=%i "
+                            "xoffset=%i yoffset=%i xadvance=%i",
+                            &id, &fc.imgrect.x, &fc.imgrect.y,
+                            &fc.imgrect.width, &fc.imgrect.height, &fc.offset.x,
+                            &fc.offset.y, &fc.advance);
+    ENSURE(scancount == 8);
+    charmap.insert(FontCharPair(id, fc));
+  }
 
-	// Parse kerning information, if available
-	if(lines.size() > static_cast<size_t>(ln))
-	{
-		int numkernings;
-		scancount = std::sscanf(lines[ln++], "kernings count=%i", &numkernings);
-		if(scancount == 1)
-		{
-			for(int i = 0; i < numkernings; i++)
-			{
-				KerningChars chars;
-				int amount;
-				scancount = std::sscanf(lines[ln++], "kerning first=%i second=%i amount=%i", &chars.first, &chars.second, &amount);
-				ENSURE(scancount == 3);
-				kernmap.insert(KerningPair(chars, amount));
-			}
-		}
-	}
+  // Parse kerning information, if available
+  if (lines.size() > static_cast<size_t>(ln)) {
+    int numkernings;
+    scancount = std::sscanf(lines[ln++], "kernings count=%i", &numkernings);
+    if (scancount == 1) {
+      for (int i = 0; i < numkernings; i++) {
+        KerningChars chars;
+        int amount;
+        scancount =
+            std::sscanf(lines[ln++], "kerning first=%i second=%i amount=%i",
+                        &chars.first, &chars.second, &amount);
+        ENSURE(scancount == 3);
+        kernmap.insert(KerningPair(chars, amount));
+      }
+    }
+  }
 }
 
 // New constructor
-Font::Font(const Image* img, bool takeOwnership) : 
-    image(img), ownsImage(takeOwnership), lineheight(8), linebase(6)
-{
-}
+Font::Font(const Image *img, bool takeOwnership)
+    : image(img), ownsImage(takeOwnership), lineheight(8), linebase(6) {}
 
 // Destructor
-Font::~Font()
-{
-    if (ownsImage && image) {
-        delete image;
-    }
-	image = nullptr;
+Font::~Font() {
+  if (ownsImage && image) {
+    delete image;
+  }
+  image = nullptr;
 }
 
 // Simple 3x5 font data for alphanumeric (very basic fallback)
@@ -179,111 +177,184 @@ static const uint8_t font5x7[] = {
     0x44, 0x64, 0x54, 0x4C, 0x44  // z
 };
 
-Font* Font::CreateDefault()
-{
-    // Create an image large enough. 95 chars (32-126). 5 bytes each. 1 pixel vertical separator? No, tightly packed in x.
-    // Let's lay them out linearly for simplicity.
-    // 95 chars * 6 pixels wide (5 + 1 spacing).
-    // Width = 570.
-    int w = 600;
-    int h = 8;
-    Image* img = new Image(w, h); 
-    
-    // Clear image
-    for (int y = 0; y < h; ++y) {
-        for (int x = 0; x < w; ++x) {
-            img->SetPixel(x, y, Color(0,0,0,0));
-        }
+Font *Font::CreateDefault() {
+  // Create an image large enough. 95 chars (32-126). 5 bytes each. 1 pixel
+  // vertical separator? No, tightly packed in x. Let's lay them out linearly
+  // for simplicity. 95 chars * 6 pixels wide (5 + 1 spacing). Width = 570.
+  int w = 600;
+  int h = 8;
+  Image *img = new Image(w, h);
+
+  // Clear image
+  for (int y = 0; y < h; ++y) {
+    for (int x = 0; x < w; ++x) {
+      img->SetPixel(x, y, Color(0, 0, 0, 0));
     }
-    
-    Font* font = new Font(img, true);
-    
-    int xoff = 0;
-    
-    // Iterate ascii 32 to 126
-    for (int c = 32; c <= 126; ++c) {
-        int idx = (c - 32) * 5;
-        if (idx >= sizeof(font5x7)) break; // Safety
-        
-        // Define char rect
-        FontChar fc;
-        fc.imgrect.x = xoff;
-        fc.imgrect.y = 0;
-        fc.imgrect.width = 5;
-        fc.imgrect.height = 7;
-        fc.offset.x = 0;
-        fc.offset.y = 0;
-        fc.advance = 6; 
-        
-        font->charmap[c] = fc;
-        
-        // Draw pixels
-        for (int col = 0; col < 5; ++col) {
-            byte colData = font5x7[idx + col];
-            for (int row = 0; row < 7; ++row) {
-                if ((colData >> row) & 1) {
-                    img->SetPixel(xoff + col, row, Color(255, 255, 255));
-                }
-            }
+  }
+
+  Font *font = new Font(img, true);
+
+  int xoff = 0;
+
+  // Iterate ascii 32 to 126
+  for (int c = 32; c <= 126; ++c) {
+    int idx = (c - 32) * 5;
+    if (idx >= sizeof(font5x7))
+      break; // Safety
+
+    // Define char rect
+    FontChar fc;
+    fc.imgrect.x = xoff;
+    fc.imgrect.y = 0;
+    fc.imgrect.width = 5;
+    fc.imgrect.height = 7;
+    fc.offset.x = 0;
+    fc.offset.y = 0;
+    fc.advance = 6;
+
+    font->charmap[c] = fc;
+
+    // Draw pixels
+    for (int col = 0; col < 5; ++col) {
+      byte colData = font5x7[idx + col];
+      for (int row = 0; row < 7; ++row) {
+        if ((colData >> row) & 1) {
+          img->SetPixel(xoff + col, row, Color(255, 255, 255));
         }
-        xoff += 6;
+      }
     }
-    
-    return font;
+    xoff += 6;
+  }
+
+  return font;
 }
 
-Font* Font::CreateBold()
-{
-    // Generate Bold font based on the 5x7 data
-    // Char width 5 -> 6. Advance 6 -> 7.
-    // We thicken by adding a pixel to the right of every set pixel.
-    
-    int w = 700; // 95 chars * 7 pixels wide
-    int h = 8;
-    Image* img = new Image(w, h); 
-    
-    // Clear image
-    for (int y = 0; y < h; ++y) {
-        for (int x = 0; x < w; ++x) {
-            img->SetPixel(x, y, Color(0,0,0,0));
-        }
+Font *Font::CreateBold() {
+  // Generate Bold font based on the 5x7 data
+  // Char width 5 -> 6. Advance 6 -> 7.
+  // We thicken by adding a pixel to the right of every set pixel.
+
+  int w = 700; // 95 chars * 7 pixels wide
+  int h = 8;
+  Image *img = new Image(w, h);
+
+  // Clear image
+  for (int y = 0; y < h; ++y) {
+    for (int x = 0; x < w; ++x) {
+      img->SetPixel(x, y, Color(0, 0, 0, 0));
     }
-    
-    Font* font = new Font(img, true);
-    font->lineheight = 8;
-    
-    int xoff = 0;
-    
-    // Iterate ascii 32 to 126
-    for (int c = 32; c <= 126; ++c) {
-        int idx = (c - 32) * 5;
-        if (idx >= (int)sizeof(font5x7)) break;
-        
-        // Define char rect
-        FontChar fc;
-        fc.imgrect.x = xoff;
-        fc.imgrect.y = 0;
-        fc.imgrect.width = 6; // Thicker
-        fc.imgrect.height = 7;
-        fc.offset.x = 0;
-        fc.offset.y = 0;
-        fc.advance = 7; 
-        
-        font->charmap[c] = fc;
-        
-        // Draw pixels
-        for (int col = 0; col < 5; ++col) {
-            byte colData = font5x7[idx + col];
-            for (int row = 0; row < 7; ++row) {
-                if ((colData >> row) & 1) {
-                    img->SetPixel(xoff + col, row, Color(255, 255, 255));
-                    img->SetPixel(xoff + col + 1, row, Color(255, 255, 255)); // Bold
-                }
-            }
+  }
+
+  Font *font = new Font(img, true);
+  font->lineheight = 8;
+
+  int xoff = 0;
+
+  // Iterate ascii 32 to 126
+  for (int c = 32; c <= 126; ++c) {
+    int idx = (c - 32) * 5;
+    if (idx >= (int)sizeof(font5x7))
+      break;
+
+    // Define char rect
+    FontChar fc;
+    fc.imgrect.x = xoff;
+    fc.imgrect.y = 0;
+    fc.imgrect.width = 6; // Thicker
+    fc.imgrect.height = 7;
+    fc.offset.x = 0;
+    fc.offset.y = 0;
+    fc.advance = 7;
+
+    font->charmap[c] = fc;
+
+    // Draw pixels
+    for (int col = 0; col < 5; ++col) {
+      byte colData = font5x7[idx + col];
+      for (int row = 0; row < 7; ++row) {
+        if ((colData >> row) & 1) {
+          img->SetPixel(xoff + col, row, Color(255, 255, 255));
+          img->SetPixel(xoff + col + 1, row, Color(255, 255, 255)); // Bold
         }
-        xoff += 7;
+      }
     }
-    
-    return font;
+    xoff += 7;
+  }
+
+  return font;
 }
 
+Font *Font::LoadFromTTF(const String &filename, float fontSize,
+                        int textureWidth, int textureHeight) {
+  // Read TTF file content
+  std::string buffer = File::ReadAsText(filename).stl();
+  if (buffer.empty()) {
+    std::cout << "Failed to read TTF file: " << filename.c_str() << std::endl;
+    return nullptr;
+  }
+
+  // Init font info to get metrics
+  stbtt_fontinfo info;
+  if (!stbtt_InitFont(&info, (const unsigned char *)buffer.data(), 0)) {
+    std::cout << "Failed to init font info." << std::endl;
+    return nullptr;
+  }
+
+  // Get vertical metrics
+  int ascent, descent, lineGap;
+  stbtt_GetFontVMetrics(&info, &ascent, &descent, &lineGap);
+
+  float scale = stbtt_ScaleForPixelHeight(&info, fontSize);
+  int baseline = (int)(ascent * scale);
+  int fontHeight = (int)((ascent - descent + lineGap) * scale);
+
+  // Prepare bitmap buffer
+  unsigned char *bitmap = new unsigned char[textureWidth * textureHeight];
+  stbtt_bakedchar cdata[96]; // ASCII 32..126 is 95 glyphs
+
+  // Bake font
+  // 32 is the first char (space), 96 is the count
+  int ret =
+      stbtt_BakeFontBitmap((unsigned char *)buffer.data(), 0, fontSize, bitmap,
+                           textureWidth, textureHeight, 32, 96, cdata);
+
+  if (ret <= 0) {
+    std::cout << "Failed to bake font bitmap. Texture might be too small."
+              << std::endl;
+  }
+
+  // Create Image from bitmap (Monochrome for fonts)
+  Image *img = new Image();
+  img->SetData(textureWidth, textureHeight, false, bitmap);
+
+  delete[] bitmap;
+
+  // Create Font object
+  Font *font = new Font(img, true);
+  font->lineheight = fontHeight;
+  font->linebase = baseline;
+
+  // Populate charmap
+  for (int i = 0; i < 96; ++i) {
+    int charCode = 32 + i;
+    stbtt_bakedchar &b = cdata[i];
+
+    FontChar fc;
+    fc.imgrect.x = b.x0;
+    fc.imgrect.y = b.y0;
+    fc.imgrect.width = b.x1 - b.x0;
+    fc.imgrect.height = b.y1 - b.y0;
+
+    // yoff is offset from baseline to top-left of glyph.
+    // We want offset from top-left of line to top-left of glyph.
+    // Top-left of line is at y = 0. Baseline is at y = baseline.
+    fc.offset.x = (int)b.xoff;
+    fc.offset.y = (int)b.yoff + baseline;
+
+    fc.advance = (int)b.xadvance;
+
+    font->charmap[charCode] = fc;
+  }
+
+  return font;
+}

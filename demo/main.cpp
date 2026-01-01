@@ -415,7 +415,15 @@ int main(int argc, char *argv[]) {
   Graphics graphics(config, true);
   Canvas &canvas = graphics.GetCanvas();
   Resources resources(config, graphics);
-  const Font &font = resources.GetFont("boldbitslarge.fnt");
+  const Font &defaultFont = resources.GetFont("boldbitslarge.fnt");
+
+  // Try loading TTF
+  Font *ttfFont = Font::LoadFromTTF("demo/assets/mleitod.ttf", 24.0f);
+  const Font &font = (ttfFont) ? *ttfFont : defaultFont;
+  if (ttfFont)
+    std::cout << "Loaded TTF font!" << std::endl;
+  else
+    std::cout << "Failed to load TTF font, using default." << std::endl;
 
   std::vector<Scene> scenes;
 
