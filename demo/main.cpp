@@ -184,6 +184,136 @@ public:
   }
 };
 
+// Custom effect for MegaJoule demo where text approaches from far with opacity
+class TextApproachEffect : public IEffect {
+private:
+  Text text;
+  Color color;
+  Canvas tempCanvas;
+
+  TweenInt scaleTween;
+  TweenInt opacityTween;
+
+  TimePoint lastTime;
+  bool active;
+  bool finished;
+  Point position;
+
+public:
+  TextApproachEffect(const Text &t, Color c)
+      : text(t), color(c), active(false), finished(false) {
+    position = Point(DISPLAY_WIDTH / 2, DISPLAY_HEIGHT / 2);
+  }
+
+  void Start() {
+    // From 5% to 100% scale
+    // From 0 to 204 opacity (80%)
+    Size size = text.GetTextSize();
+    int targetW = size.width;
+    int startW = targetW / 20; // 5%
+
+    scaleTween = tweeny::from(startW).to(targetW).during(3000).via(
+        easing::enumerated::cubicOut);
+    opacityTween =
+        tweeny::from(0).to(204).during(3000).via(easing::enumerated::cubicOut);
+
+    lastTime = Clock::now();
+    active = true;
+    finished = false;
+  }
+
+  virtual void Reset() override {
+    active = false;
+    finished = false;
+  }
+
+  void Render(Canvas &canvas, uint32_t timeMs) override {
+    // Auto-start on first render if not active/finished
+    if (!active && !finished) {
+      Start();
+    }
+
+    int currentW;
+    int currentOpacity;
+
+    if (!active) {
+      // If finished, draw final state
+      if (finished) {
+        currentW = text.GetTextSize().width;
+        currentOpacity = 204;
+      } else {
+        return;
+      }
+    } else {
+      TimePoint now = Clock::now();
+      int dt = static_cast<int>(ch::ToMilliseconds(now - lastTime));
+      lastTime = now;
+
+      currentW = scaleTween.step(dt);
+      currentOpacity = opacityTween.step(dt);
+
+      if (scaleTween.progress() >= 1.0f) {
+        active = false;
+        finished = true;
+        currentW = text.GetTextSize().width;
+        currentOpacity = 204;
+      }
+    }
+
+    if (currentW <= 0)
+      return;
+
+    // Draw text to temp canvas at full size
+    tempCanvas.Clear(Color(0, 0, 0, 0));
+    // Draw mask (WHITE)
+    text.DrawMask(tempCanvas, position, WHITE);
+
+    // Get the bounding box of the text in the temp canvas
+    Rect srcRect = text.GetTextRect(position);
+    if (srcRect.width <= 0 || srcRect.height <= 0)
+      return;
+
+    // Calculate scaled height maintaining aspect ratio based on Source Rect
+    int textHeight = static_cast<int>(
+        (static_cast<float>(currentW) / static_cast<float>(srcRect.width)) *
+        static_cast<float>(srcRect.height));
+
+    Point offset((canvas.Width() - currentW) / 2,
+                 (canvas.Height() - textHeight) / 2);
+
+    if ((currentW > 0) && (textHeight > 0)) {
+      // Nearest-neighbor scaling
+      // Map 0..currentW to srcRect.x..srcRect.Right
+      int x_ratio = ((srcRect.width << 16) / currentW) + 1;
+      int y_ratio = ((srcRect.height << 16) / textHeight) + 1;
+
+      for (int i = 0; i < textHeight; i++) {
+        for (int j = 0; j < currentW; j++) {
+          int x2 = srcRect.x + ((j * x_ratio) >> 16);
+          int y2 = srcRect.y + ((i * y_ratio) >> 16);
+
+          if (offset.x + j >= 0 && offset.x + j < canvas.Width() &&
+              offset.y + i >= 0 && offset.y + i < canvas.Height()) {
+
+            // Check bounds for tempCanvas access too just in case
+            if (x2 >= 0 && x2 < tempCanvas.Width() && y2 >= 0 &&
+                y2 < tempCanvas.Height()) {
+              Color c = tempCanvas.GetPixel(x2, y2);
+              if (c.a > 0) {
+                // Apply global opacity
+                int finalAlpha = (c.a * currentOpacity) / 255;
+                Color drawColor = color;
+                drawColor.a = static_cast<byte>(finalAlpha);
+                canvas.BlendPixel(offset.x + j, offset.y + i, drawColor);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+};
+
 // --- Scene Setup Functions ---
 
 void AddBasicScenes(std::vector<Scene> &scenes, const Resources &resources) {
@@ -297,7 +427,19 @@ void AddShaderScenes(std::vector<Scene> &scenes,
   auto grid = std::make_shared<PixelShaderEffect>(GridShader);
   auto stars = std::make_shared<StarParallaxEffect>(
       40, DISPLAY_WIDTH, DISPLAY_HEIGHT, 14); // 40 stars, 14px band
-  scenes.push_back({"Grid", std::make_shared<CompositeEffect>(grid, stars)});
+  auto bg = std::make_shared<CompositeEffect>(grid, stars);
+  scenes.push_back({"Grid", bg});
+
+  // MegaJoule Scene (background + text)
+  // Text
+  Text mjText(Resources::GetResources().GetFont("boldbitslarge.fnt"),
+              HorizontalAlign::Center, VerticalAlign::Middle);
+  mjText.SetText("MEGAJOULE");
+  auto mjEffect = std::make_shared<TextApproachEffect>(
+      mjText, Color(0, 215, 215)); // Gold color
+
+  scenes.push_back(
+      {"MegaJoule", std::make_shared<CompositeEffect>(bg, mjEffect)});
 
   // Flash Effect (on source)
   if (sourceForEffects) {
