@@ -314,6 +314,195 @@ public:
   }
 };
 
+// Port of UnstoppableAnimation from Pandemic
+
+// Port of UnstoppableAnimation from Pandemic
+class UnstoppableEffect : public IEffect {
+private:
+  static constexpr int FADE_ALPHA = 255;
+  static constexpr int FADE_FADE = 2;
+  static constexpr int BOLT_TIME1 = 400;
+  static constexpr int BOLT_TIME2 = 820;
+  static constexpr int BOLT_DURATION = 120; // ms
+
+  Text text;
+  Canvas tempcanvas;
+  const Image &texture;
+  const Image &bolt1;
+  const Image &bolt2;
+  const Image &distort1;
+  const Image &electcolors;
+
+  TweenInt textprogress;
+  TweenFloat fadeprogress;
+  TweenInt flashprogress;
+
+  TimePoint starttime;
+  TimePoint laststeptime;
+  TimePoint bolttime1;
+  TimePoint bolttime2;
+  TimePoint bolttimeoff;
+
+  bool started;
+
+public:
+  UnstoppableEffect()
+      : text("UNSTOPPABLE",
+             Resources::GetResources().GetFont("boldbitslarge.fnt"),
+             HorizontalAlign::Left, VerticalAlign::Middle, 1),
+        texture(Resources::GetResources().GetImage("gray22d.dds")),
+        bolt1(Resources::GetResources().GetImage("bolt1.dds")),
+        bolt2(Resources::GetResources().GetImage("bolt2.dds")),
+        distort1(Resources::GetResources().GetImage("distort1.dds")),
+        electcolors(Resources::GetResources().GetImage("electcolors.dds")),
+        started(false) {}
+
+  void Start() {
+    Resources::GetResources().GetSound("unstoppable.wav").Play();
+    starttime = Clock::now();
+    laststeptime = starttime;
+    // Note: Wait times and durations are in ms
+    textprogress = tweeny::from(100)
+                       .wait(BOLT_TIME1)
+                       .to(-text.GetTextSize().width - 5)
+                       .during(2000);
+    fadeprogress =
+        tweeny::from(0.0f).to(1.0f).during(400).via(easing::quadraticOut);
+
+    // Flash progress: 0 -> 255 -> 0 ...
+    flashprogress = tweeny::from(0)
+                        .wait(400)
+                        .to(255)
+                        .during(1)
+                        .to(0)
+                        .during(200)
+                        .via(easing::exponentialOut)
+                        .wait(100)
+                        .to(255)
+                        .during(1)
+                        .to(100)
+                        .during(120)
+                        .to(255)
+                        .during(1)
+                        .to(100)
+                        .during(120)
+                        .to(255)
+                        .during(1)
+                        .to(0)
+                        .during(200)
+                        .via(easing::exponentialOut);
+
+    bolttime1 = starttime + ch::milliseconds(BOLT_TIME1);
+    bolttime2 = starttime + ch::milliseconds(BOLT_TIME2);
+    bolttimeoff = TimePoint();
+    started = true;
+  }
+
+  void Render(Canvas &canvas, uint32_t timeMs) override {
+    if (!started) {
+      Start();
+    }
+
+    TimePoint t = Clock::now();
+
+    // Check if animation ended
+    if (!ch::IsTimeSet(starttime) ||
+        (t > (starttime + ch::milliseconds(textprogress.duration())))) {
+      // Animation ended, maybe restart? Or just stop.
+      // For demo loop, we might want to restart or just stay idle.
+      // If we want to loop, we can reset starttime.
+      // Let's just return for now, effectively freezing or showing last
+      // frame? Actually code sets starttime to TimePoint() which resets it.
+      // But if we return, nothing is drawn?
+      // Adaptation: If finished, let's just restart for demo purposes after a
+      // delay? Or just keep started=false and let the scene loop handle it?
+      // If I return here without drawing, screen might be black or previous
+      // frame. Let's restart immediately for now to keep it active.
+      Start();
+      t = Clock::now(); // Update t
+    }
+
+    // Advance time
+    int dt = static_cast<int>(ch::ToMilliseconds(t - laststeptime));
+    laststeptime = t;
+    int textpos = textprogress.step(dt);
+    float backfade = fadeprogress.step(dt);
+    byte flashalpha = static_cast<byte>(flashprogress.step(dt));
+
+    tempcanvas.Clear(Color(0, 0, 0, 0));
+    if (t > bolttime1) {
+      // Draw text on temp canvas
+      text.DrawOutlineMask(tempcanvas, Point(textpos, 15), 2, BLACK);
+      text.DrawTexturedMask(tempcanvas, Point(textpos, 15), texture);
+
+      // Process pixels for electric effect
+      int zt = static_cast<int>(
+          ch::ToMilliseconds(t - starttime - ch::milliseconds(BOLT_TIME1)) %
+          512);
+      if (zt > 255)
+        zt = 255 - (zt - 255);
+      float colorswidthf = static_cast<float>(electcolors.Width() - 1);
+
+      // OPTIMIZATION: Loop only through relevant area if possible, but for
+      // distortion we traverse display However, tempcanvas is full size? Yes.
+      for (int y = 0; y < DISPLAY_HEIGHT; y++) {
+        for (int x = 0; x < DISPLAY_WIDTH; x++) {
+          int dw = distort1.Width();
+          int dh = distort1.Height();
+          if (dw == 0 || dh == 0)
+            continue; // Safety
+
+          int dx = (-textpos + x) % dw;
+          if (dx < 0)
+            dx += dw;
+          int dy = y % dh;
+          int zoffset = distort1.GetByte(dx, dy);
+          float epos =
+              std::clamp(static_cast<float>(zoffset - zt), -20.0f, 20.0f) /
+                  40.0f +
+              0.5f;
+          Color ecolor = electcolors.GetColor(
+              static_cast<int>(
+                  std::clamp(roundf(epos * colorswidthf), 0.0f, colorswidthf)),
+              0);
+          Color cc = tempcanvas.GetPixel(x, y);
+          ecolor.a = cc.a;
+          ecolor.Add(cc);
+          tempcanvas.SetPixel(x, y, ecolor);
+        }
+      }
+    }
+
+    // Draw the fade and the flashes over the background
+    for (int y = 0; y < DISPLAY_HEIGHT; y++) {
+      for (int x = 0; x < DISPLAY_WIDTH; x++) {
+        byte fa = static_cast<byte>(std::clamp(
+            static_cast<int>(FADE_ALPHA * backfade) - FADE_FADE * y, 0, 255));
+        canvas.BlendPixel(x, y, Color(BLACK, fa));
+        canvas.BlendPixel(x, y, Color(WHITE, flashalpha));
+      }
+    }
+
+    // Draw temp canvas to final canvas
+    canvas.DrawColorImageBlend(Point(0, 0), tempcanvas);
+
+    // Draw the lightning bolts
+    if (ch::IsTimeSet(bolttime1) && (t > bolttime1) &&
+        (!ch::IsTimeSet(bolttimeoff) || (t < bolttimeoff))) {
+      bolttimeoff = bolttime1 + ch::milliseconds(BOLT_DURATION);
+      canvas.DrawColorImageAdd(Point(60, 0), bolt2);
+    } else if (ch::IsTimeSet(bolttime1) && ch::IsTimeSet(bolttimeoff) &&
+               (t > bolttimeoff)) {
+      bolttime1 = TimePoint();
+      bolttimeoff = TimePoint();
+    } else if (ch::IsTimeSet(bolttime2) && (t > bolttime2) &&
+               (!ch::IsTimeSet(bolttimeoff) || (t < bolttimeoff))) {
+      bolttimeoff = bolttime2 + ch::milliseconds(BOLT_DURATION);
+      canvas.DrawColorImageAdd(Point(8, 0), bolt1);
+    }
+  }
+};
+
 // --- Scene Setup Functions ---
 
 void AddBasicScenes(std::vector<Scene> &scenes, const Resources &resources) {
@@ -585,6 +774,9 @@ int main(int argc, char *argv[]) {
   AddTextScenes(scenes, font, canvas.Width(), canvas.Height());
 
   // 5. Shaders
+  // Unstoppable
+  scenes.push_back({"Unstoppable", std::make_shared<UnstoppableEffect>()});
+
   // Pass Plasma (scenes[0]) as source for effects like Flash
   auto plasma = scenes.empty() ? nullptr : scenes[0].effect;
   AddShaderScenes(scenes, plasma);
