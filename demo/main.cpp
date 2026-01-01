@@ -185,6 +185,7 @@ public:
 };
 
 // Custom effect for MegaJoule demo where text approaches from far with opacity
+// Custom effect for MegaJoule demo where text approaches from far with opacity
 class TextApproachEffect : public IEffect {
 private:
   Text text;
@@ -194,6 +195,13 @@ private:
   TweenInt scaleTween;
   TweenInt opacityTween;
 
+  // Electric Effect Members
+  const Image &distort1;
+  const Image &electcolors;
+  TweenInt flashTween;
+  bool electricActive;
+  TimePoint electricStartTime;
+
   TimePoint lastTime;
   bool active;
   bool finished;
@@ -201,7 +209,10 @@ private:
 
 public:
   TextApproachEffect(const Text &t, Color c)
-      : text(t), color(c), active(false), finished(false) {
+      : text(t), color(c),
+        distort1(Resources::GetResources().GetImage("distort1.dds")),
+        electcolors(Resources::GetResources().GetImage("electcolors.dds")),
+        active(false), finished(false), electricActive(false) {
     position = Point(DISPLAY_WIDTH / 2, DISPLAY_HEIGHT / 2);
   }
 
@@ -217,14 +228,44 @@ public:
     opacityTween =
         tweeny::from(0).to(204).during(3000).via(easing::enumerated::cubicOut);
 
+    // Setup flash tween similar to Unstoppable but triggered later
+    flashTween = tweeny::from(0).to(0).during(1); // Placeholder init
+
     lastTime = Clock::now();
     active = true;
     finished = false;
+    electricActive = false;
+  }
+
+  void StartElectric() {
+    electricActive = true;
+    electricStartTime = Clock::now();
+    // Flash: 0 -> 255 -> 0 ... simplified version of Unstoppable
+    flashTween = tweeny::from(0)
+                     .to(255)
+                     .during(1)
+                     .to(0)
+                     .during(200)
+                     .via(easing::exponentialOut)
+                     .wait(100)
+                     .to(255)
+                     .during(1)
+                     .to(100)
+                     .during(120)
+                     .to(255)
+                     .during(1)
+                     .to(0)
+                     .during(200)
+                     .via(easing::exponentialOut);
+    Resources::GetResources()
+        .GetSound("unstoppable.wav")
+        .Play(); // Play sound on impact?
   }
 
   virtual void Reset() override {
     active = false;
     finished = false;
+    electricActive = false;
   }
 
   void Render(Canvas &canvas, uint32_t timeMs) override {
@@ -235,20 +276,12 @@ public:
 
     int currentW;
     int currentOpacity;
+    int dt = 0;
 
-    if (!active) {
-      // If finished, draw final state
-      if (finished) {
-        currentW = text.GetTextSize().width;
-        currentOpacity = 204;
-      } else {
-        return;
-      }
-    } else {
-      TimePoint now = Clock::now();
-      int dt = static_cast<int>(ch::ToMilliseconds(now - lastTime));
+    TimePoint now = Clock::now();
+    if (active) {
+      dt = static_cast<int>(ch::ToMilliseconds(now - lastTime));
       lastTime = now;
-
       currentW = scaleTween.step(dt);
       currentOpacity = opacityTween.step(dt);
 
@@ -257,7 +290,17 @@ public:
         finished = true;
         currentW = text.GetTextSize().width;
         currentOpacity = 204;
+        // Trigger Electric Effect
+        StartElectric();
       }
+    } else if (finished) {
+      currentW = text.GetTextSize().width;
+      currentOpacity = electricActive ? 255 : 204;
+      dt = static_cast<int>(ch::ToMilliseconds(
+          now - lastTime)); // Should track time for electric?
+      lastTime = now;       // Keep updating time
+    } else {
+      return;
     }
 
     if (currentW <= 0)
@@ -265,8 +308,108 @@ public:
 
     // Draw text to temp canvas at full size
     tempCanvas.Clear(Color(0, 0, 0, 0));
-    // Draw mask (WHITE)
-    text.DrawMask(tempCanvas, position, WHITE);
+
+    if (electricActive && finished) {
+      // --- Electric Distortion Logic ---
+      // Draw textured/colored text first?
+      // User wants the "electric effect of the UnstoppableEffect".
+      // Unstoppable draws textured mask then distorts.
+      // We originally draw Mask (WHITE).
+      // Let's stick to WHITE mask but apply distortion coloring?
+      // Unstoppable uses "gray22d.dds" texture. We will use plain WHITE mask
+      // for now to keep color? Actually the electric effect REPLACES pixels
+      // with `electcolors`. Unstoppable logic:
+      // 1. Draw Text (Textured) on tempcanvas.
+      // 2. Iterate pixels, calculate distortion from `distort1`, sample
+      // `electcolors`, ADD to pixel.
+
+      // We already have `text`, `color` (gold).
+      // Let's draw text mask with Gold color first.
+      text.DrawMask(tempCanvas, position, color); // Gold text
+
+      // Apply Electric Distortion
+      int zt =
+          static_cast<int>(ch::ToMilliseconds(now - electricStartTime) % 512);
+      if (zt > 255)
+        zt = 255 - (zt - 255);
+      float colorswidthf = static_cast<float>(electcolors.Width() - 1);
+
+      // Optimize: Loop over text rect only?
+      // Unstoppable loops entire screen but text moves. Here text is centered.
+      Rect textRect = text.GetTextRect(position);
+      // Expand slightly for distortion
+      int padding = 20;
+      int startX = std::max(0, textRect.x - padding);
+      int endX = std::min(canvas.Width(), textRect.Right() + padding);
+      int startY = std::max(0, textRect.y - padding);
+      int endY = std::min(canvas.Height(), textRect.Bottom() + padding);
+
+      for (int y = startY; y < endY; y++) {
+        for (int x = startX; x < endX; x++) {
+          // Distortion logic
+          int dw = distort1.Width();
+          int dh = distort1.Height();
+          if (dw == 0 || dh == 0)
+            continue;
+
+          // Use static text position reference for distortion pattern
+          // In Unstoppable: (-textpos + x) % dw. textpos moves.
+          // Here text is static. Use x?
+          int dx = (x) % dw;
+          int dy = y % dh;
+          int zoffset = distort1.GetByte(dx, dy);
+
+          float epos =
+              std::clamp(static_cast<float>(zoffset - zt), -20.0f, 20.0f) /
+                  40.0f +
+              0.5f;
+          Color ecolor = electcolors.GetColor(
+              static_cast<int>(
+                  std::clamp(roundf(epos * colorswidthf), 0.0f, colorswidthf)),
+              0);
+
+          Color cc = tempCanvas.GetPixel(x, y);
+          // Only apply if pixel has alpha? Or add to everything (aura)?
+          // Unstoppable: ecolor.a = cc.a; ecolor.Add(cc); SetPixel.
+          // This implies it only shows where there is already something? No,
+          // cc.a comes from tempcanvas. If tempcanvas is empty there, cc.a is
+          // 0. ecolor.a becomes 0. So it only affects drawn text pixels.
+
+          if (cc.a > 0) {
+            ecolor.a = cc.a;
+            // Blend or Add? Unstoppable does: ecolor.Add(cc);
+            // Meaning it brightens the existing color.
+            // But strictly, Unstoppable SetPixel replaces it with `ecolor`
+            // (which has added `cc`). So result = ecolor + original_pixel.
+            ecolor.Add(cc);
+            tempCanvas.SetPixel(x, y, ecolor);
+          }
+        }
+      }
+    } else {
+      // Normal Drawing during approach
+      text.DrawMask(tempCanvas, position, WHITE);
+    }
+
+    // Now copy tempCanvas to final canvas.
+    // Logic differs during scale vs static.
+
+    if (finished) {
+      // 1:1 scale copy (since it's full size)
+      // Apply global opacity (80% / 204)
+      // If electric is active, we might want full brightness or keep fading?
+      // User said "at the end ... as well as the light flash". Flash is
+      // overlay. Let's keep the Gold text at 80% opacity, but the electric
+      // effect might add brightness. If we processed tempCanvas in place for
+      // electric, we just blend it. BUT wait: scaling logic below uses
+      // `srcRect`. If finished, currentW == full width. Scaling loop handles
+      // 1:1 too. But for optimization, we can just DrawImageBlend.
+
+      // However, we need to respect `currentOpacity`.
+      // Render loop below handles scaling AND opacity.
+      // If we reuse it, we are fine.
+      // Just need to ensure `srcRect` is valid.
+    }
 
     // Get the bounding box of the text in the temp canvas
     Rect srcRect = text.GetTextRect(position);
@@ -302,13 +445,34 @@ public:
               if (c.a > 0) {
                 // Apply global opacity
                 int finalAlpha = (c.a * currentOpacity) / 255;
-                Color drawColor = color;
-                drawColor.a = static_cast<byte>(finalAlpha);
-                canvas.BlendPixel(offset.x + j, offset.y + i, drawColor);
+                if (!electricActive) {
+                  // Normal approach: Apply Color (Gold) to White Mask
+                  // If finished/electric, color is already in c (Gold +
+                  // Electric)
+                  Color drawColor = color;
+                  drawColor.a = static_cast<byte>(finalAlpha);
+                  canvas.BlendPixel(offset.x + j, offset.y + i, drawColor);
+                } else {
+                  // Electric Active: c is already colored (Gold + Electric)
+                  // Apply opacity
+                  c.a = static_cast<byte>(finalAlpha);
+                  canvas.BlendPixel(offset.x + j, offset.y + i, c);
+                }
               }
             }
           }
         }
+      }
+    }
+
+    // Render Flash Overlay
+    if (electricActive && flashTween.progress() < 1.0f) {
+      int flashAlpha = flashTween.step(dt);
+      if (flashAlpha > 0) {
+        Color flashColor(255, 255, 255, static_cast<byte>(flashAlpha));
+        canvas.DrawRectangleBlend(Point(0, 0),
+                                  Point(DISPLAY_WIDTH, DISPLAY_HEIGHT),
+                                  flashColor, flashColor);
       }
     }
   }
