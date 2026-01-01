@@ -2,6 +2,10 @@ cmake_minimum_required(VERSION 3.10)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Enable Address Sanitize (ASan) for debugging
+add_compile_options(-fsanitize=address -g)
+add_link_options(-fsanitize=address)
+
 project(libled)
 
 # --- 1. CONFIGURATION SWITCH ---
