@@ -3,214 +3,206 @@
 
 #include "utils/File.h"
 
-Resources* Resources::instance = nullptr;
+Resources *Resources::instance = nullptr;
 
-Resources::Resources(const Configuration& config, Graphics& graphics)
-{
-	instance = this;
-	graphics.ClearRenderers();
+Resources::Resources(const Configuration &config, Graphics &graphics) {
+  instance = this;
+  graphics.ClearRenderers();
 
-	std::cout << "Loading resources... " << std::endl;
-	
-	// Find all files in the data path
-	vector<String> allfiles;
-	String datapath = config.DataPath();
-	std::cout << "Data path: " << datapath << std::endl;
-	bool result = File::GetFiles(datapath, allfiles);
-	ENSURE(result);
+  std::cout << "Loading resources... " << std::endl;
 
-	// Make lists of the files we want to load.
-	// We use these lists to load resources by type.
-	vector<String> ddsfiles, fntfiles, wavfiles, mp3files, anifiles, giffiles;
-	CopyFilenamesByExtension(allfiles, ddsfiles, ".dds");
-	CopyFilenamesByExtension(allfiles, fntfiles, ".fnt");
-	CopyFilenamesByExtension(allfiles, wavfiles, ".wav");
-	CopyFilenamesByExtension(allfiles, mp3files, ".mp3");
-	CopyFilenamesByExtension(allfiles, anifiles, ".ani");
-	CopyFilenamesByExtension(allfiles, giffiles, ".gif");
+  // Find all files in the data path
+  vector<String> allfiles;
+  String datapath = config.DataPath();
+  std::cout << "Data path: " << datapath << std::endl;
+  bool result = File::GetFiles(datapath, allfiles);
+  ENSURE(result);
 
-	// Load music
-	for(const String& filename : mp3files)
-	{
-		String name = File::GetFileName(filename);
-		int vol = config.GetInt(String("Resources.") + name + ".Volume", 100);
-		Sound* mus = new Sound(filename, true, static_cast<float>(vol) / 100.0f);
-		music.insert(MusicMap::value_type(name, mus));
-	}
+  // Make lists of the files we want to load.
+  // We use these lists to load resources by type.
+  vector<String> ddsfiles, fntfiles, wavfiles, mp3files, anifiles, giffiles;
+  CopyFilenamesByExtension(allfiles, ddsfiles, ".dds");
+  CopyFilenamesByExtension(
+      allfiles, ddsfiles,
+      ".png"); // Re-use ddsfiles vector for all static images
+  CopyFilenamesByExtension(allfiles, fntfiles, ".fnt");
+  CopyFilenamesByExtension(allfiles, wavfiles, ".wav");
+  CopyFilenamesByExtension(allfiles, mp3files, ".mp3");
+  CopyFilenamesByExtension(allfiles, anifiles, ".ani");
+  CopyFilenamesByExtension(allfiles, giffiles, ".gif");
 
-	// Load images
-	for(const String& filename : ddsfiles)
-	{
-		String name = File::GetFileName(filename);
-		Image* img = new Image(filename);
-		images.insert(ImagesMap::value_type(name, img));
-	}
+  // Load music
+  for (const String &filename : mp3files) {
+    String name = File::GetFileName(filename);
+    int vol = config.GetInt(String("Resources.") + name + ".Volume", 100);
+    Sound *mus = new Sound(filename, true, static_cast<float>(vol) / 100.0f);
+    music.insert(MusicMap::value_type(name, mus));
+  }
 
-	// Load sounds
-	for(const String& filename : wavfiles)
-	{
-		String name = File::GetFileName(filename);
-		int vol = config.GetInt(String("Resources.") + name + ".Volume", 100);
-		Sound* snd = new Sound(filename, false, static_cast<float>(vol) / 100.0f);
-		sounds.insert(SoundsMap::value_type(name, snd));
-	}
+  // Load images
+  for (const String &filename : ddsfiles) {
+    String name = File::GetFileName(filename);
+    Image *img = new Image(filename);
+    images.insert(ImagesMap::value_type(name, img));
+  }
 
-	// Load fonts
-	for(const String& filename : fntfiles)
-	{
-		String name = File::GetFileName(filename);
-        String textureFile = Font::GetTextureFilename(filename);
-        const Image& img = GetImage(textureFile);
-		Font* fnt = new Font(filename, &img);
-		fonts.insert(FontsMap::value_type(name, fnt));
-	}
+  // Load sounds
+  for (const String &filename : wavfiles) {
+    String name = File::GetFileName(filename);
+    int vol = config.GetInt(String("Resources.") + name + ".Volume", 100);
+    Sound *snd = new Sound(filename, false, static_cast<float>(vol) / 100.0f);
+    sounds.insert(SoundsMap::value_type(name, snd));
+  }
 
-	// Load animations
-	for(const String& filename : anifiles)
-	{
-		String name = File::GetFileName(filename);
-        String textureFile = Animation::GetTextureFilename(filename);
-        const Image& img = GetImage(textureFile);
-		Animation* ani = new Animation(filename, &img);
-		animations.insert(AnimationsMap::value_type(name, ani));
-	}
-    
-    // Load GIFs
-    for(const String& filename : giffiles)
-    {
-        String name = File::GetFileName(filename);
-        auto gif = std::make_shared<libled::AnimatedImage>();
-        if (gif->LoadGif(filename)) {
-            gifs.insert(GifsMap::value_type(name, gif));
-        } else {
-            std::cerr << "Failed to load GIF: " << filename << std::endl;
-        }
+  // Load fonts
+  for (const String &filename : fntfiles) {
+    String name = File::GetFileName(filename);
+    String textureFile = Font::GetTextureFilename(filename);
+    const Image &img = GetImage(textureFile);
+    Font *fnt = new Font(filename, &img);
+    fonts.insert(FontsMap::value_type(name, fnt));
+  }
+
+  // Load animations
+  for (const String &filename : anifiles) {
+    String name = File::GetFileName(filename);
+    String textureFile = Animation::GetTextureFilename(filename);
+    const Image &img = GetImage(textureFile);
+    Animation *ani = new Animation(filename, &img);
+    animations.insert(AnimationsMap::value_type(name, ani));
+  }
+
+  // Load GIFs
+  for (const String &filename : giffiles) {
+    String name = File::GetFileName(filename);
+    auto gif = std::make_shared<libled::AnimatedImage>();
+    if (gif->LoadGif(filename)) {
+      gifs.insert(GifsMap::value_type(name, gif));
+    } else {
+      std::cerr << "Failed to load GIF: " << filename << std::endl;
     }
+  }
 
-	// Make shortcuts for common resources
-	boldbits = &GetFont("boldbits.fnt");
-	boldbitslarge = &GetFont("boldbitslarge.fnt");
-	smallest = &GetFont("smallest.fnt");
+  // Make shortcuts for common resources
+  boldbits = &GetFont("boldbits.fnt");
+  boldbitslarge = &GetFont("boldbitslarge.fnt");
+  smallest = &GetFont("smallest.fnt");
 }
 
-Resources::~Resources()
-{
-	instance = nullptr;
+Resources::~Resources() {
+  instance = nullptr;
 
-	// Unload music
-	for(MusicMap::value_type& mus : music)
-		delete mus.second;
-	music.clear();
+  // Unload music
+  for (MusicMap::value_type &mus : music)
+    delete mus.second;
+  music.clear();
 
-	// Unload sounds
-	for(SoundsMap::value_type& snd : sounds)
-		delete snd.second;
-	sounds.clear();
+  // Unload sounds
+  for (SoundsMap::value_type &snd : sounds)
+    delete snd.second;
+  sounds.clear();
 
-	// Unload fonts
-	for(FontsMap::value_type& fnt : fonts)
-		delete fnt.second;
-	fonts.clear();
+  // Unload fonts
+  for (FontsMap::value_type &fnt : fonts)
+    delete fnt.second;
+  fonts.clear();
 
-	// Unload images
-	for(ImagesMap::value_type& img : images)
-		delete img.second;
-	images.clear();
+  // Unload images
+  for (ImagesMap::value_type &img : images)
+    delete img.second;
+  images.clear();
 
-	// Unload animations
-	for(AnimationsMap::value_type& ani : animations)
-		delete ani.second;
-	animations.clear();
+  // Unload animations
+  for (AnimationsMap::value_type &ani : animations)
+    delete ani.second;
+  animations.clear();
 
-	// Unload gifs
-	gifs.clear();
-
+  // Unload gifs
+  gifs.clear();
 }
 
-const Image& Resources::GetImage(const char* filename) const
-{
-	auto result = images.find(std::string(filename));
-	if(result == images.cend())
-	{
-		std::cout << "Image with filename '" << filename << "' was not found." << std::endl;
-		FAIL("File not found");
-	}
-	return *(result->second);
+bool Resources::HasImage(const char *filename) const {
+  return images.find(std::string(filename)) != images.cend();
 }
 
-const Font& Resources::GetFont(const char* filename) const
-{
-	auto result = fonts.find(std::string(filename));
-	if(result == fonts.cend())
-	{
-		std::cout << "Font with filename '" << filename << "' was not found." << std::endl;
-		FAIL("File not found");
-	}
-	return *(result->second);
+const Image &Resources::GetImage(const char *filename) const {
+  auto result = images.find(std::string(filename));
+  if (result == images.cend()) {
+    std::cout << "Image with filename '" << filename << "' was not found."
+              << std::endl;
+    FAIL("File not found");
+  }
+  return *(result->second);
 }
 
-
-Sound& Resources::GetSound(const char* filename) const
-{
-	auto result = sounds.find(std::string(filename));
-	if(result == sounds.cend())
-	{
-		std::cout << "Sound with filename '" << filename << "' was not found." << std::endl;
-		FAIL("File not found");
-	}
-	return *(result->second);
+const Font &Resources::GetFont(const char *filename) const {
+  auto result = fonts.find(std::string(filename));
+  if (result == fonts.cend()) {
+    std::cout << "Font with filename '" << filename << "' was not found."
+              << std::endl;
+    FAIL("File not found");
+  }
+  return *(result->second);
 }
 
-Sound& Resources::GetMusic(const char* filename) const
-{
-	auto result = music.find(std::string(filename));
-	if(result == music.cend())
-	{
-		std::cout << "Music with filename '" << filename << "' was not found." << std::endl;
-		FAIL("File not found");
-	}
-	return *(result->second);
+Sound &Resources::GetSound(const char *filename) const {
+  auto result = sounds.find(std::string(filename));
+  if (result == sounds.cend()) {
+    std::cout << "Sound with filename '" << filename << "' was not found."
+              << std::endl;
+    FAIL("File not found");
+  }
+  return *(result->second);
 }
 
-const Animation& Resources::GetAni(const char* filename) const
-{
-	auto result = animations.find(std::string(filename));
-	if(result == animations.cend())
-	{
-		std::cout << "Animation with filename '" << filename << "' was not found." << std::endl;
-		FAIL("File not found");
-	}
-	return *(result->second);
+Sound &Resources::GetMusic(const char *filename) const {
+  auto result = music.find(std::string(filename));
+  if (result == music.cend()) {
+    std::cout << "Music with filename '" << filename << "' was not found."
+              << std::endl;
+    FAIL("File not found");
+  }
+  return *(result->second);
 }
 
-std::shared_ptr<libled::AnimatedImage> Resources::GetGif(const char* filename) const
-{
-	auto result = gifs.find(std::string(filename));
-	if(result == gifs.cend())
-	{
-		std::cout << "GIF with filename '" << filename << "' was not found." << std::endl;
-		FAIL("File not found");
-	}
-	return result->second;
+const Animation &Resources::GetAni(const char *filename) const {
+  auto result = animations.find(std::string(filename));
+  if (result == animations.cend()) {
+    std::cout << "Animation with filename '" << filename << "' was not found."
+              << std::endl;
+    FAIL("File not found");
+  }
+  return *(result->second);
 }
 
-// This copies all filenames from input to output which match the specified extension
-void Resources::CopyFilenamesByExtension(vector<String>& input, vector<String>& output, const char* extension)
-{
-	String extlowercase = String::ToLower(extension);
-	for(const String& filename : input)
-	{
-		if(String::ToLower(File::GetExtension(filename)) == extlowercase)
-			output.push_back(filename);
-	}
+std::shared_ptr<libled::AnimatedImage>
+Resources::GetGif(const char *filename) const {
+  auto result = gifs.find(std::string(filename));
+  if (result == gifs.cend()) {
+    std::cout << "GIF with filename '" << filename << "' was not found."
+              << std::endl;
+    FAIL("File not found");
+  }
+  return result->second;
 }
 
-Resources& Resources::GetResources()
-{
-if(instance == nullptr)
-{
-std::cerr << "FATAL: Resources instance accessed before creation!" << std::endl;
-exit(1);
+// This copies all filenames from input to output which match the specified
+// extension
+void Resources::CopyFilenamesByExtension(vector<String> &input,
+                                         vector<String> &output,
+                                         const char *extension) {
+  String extlowercase = String::ToLower(extension);
+  for (const String &filename : input) {
+    if (String::ToLower(File::GetExtension(filename)) == extlowercase)
+      output.push_back(filename);
+  }
 }
-return *instance;
+
+Resources &Resources::GetResources() {
+  if (instance == nullptr) {
+    std::cerr << "FATAL: Resources instance accessed before creation!"
+              << std::endl;
+    exit(1);
+  }
+  return *instance;
 }

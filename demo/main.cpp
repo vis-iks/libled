@@ -171,13 +171,32 @@ public:
   }
 };
 
+// Simple Effect to display a static image
+class ImageEffect : public IEffect {
+private:
+  const Image &image;
+
+public:
+  ImageEffect(const Image &img) : image(img) {}
+
+  void Render(Canvas &canvas, uint32_t timeMs) override {
+    canvas.DrawColorImage(Point(0, 0), image);
+  }
+};
+
 // --- Scene Setup Functions ---
 
-void AddBasicScenes(std::vector<Scene> &scenes) {
+void AddBasicScenes(std::vector<Scene> &scenes, const Resources &resources) {
   scenes.push_back({"Plasma", std::make_shared<PlasmaEffect>()});
   scenes.push_back({"Vertical Gradient", std::make_shared<GradientEffect>(
                                              Color(255, 0, 0), Color(0, 0, 255),
                                              GradientType::LinearVertical)});
+
+  // Test PNG Scene
+  if (resources.HasImage("test.png")) {
+    const Image &img = resources.GetImage("test.png");
+    scenes.push_back({"Test PNG", std::make_shared<ImageEffect>(img)});
+  }
 }
 
 void AddParticleScenes(std::vector<Scene> &scenes,
@@ -401,7 +420,7 @@ int main(int argc, char *argv[]) {
   std::vector<Scene> scenes;
 
   // 1. Basic
-  AddBasicScenes(scenes);
+  AddBasicScenes(scenes, resources);
 
   // 2. Animations (Load these first to get Pacman image for particles)
   auto pacmanAnim = AddAnimationScenes(scenes, resources, font);
