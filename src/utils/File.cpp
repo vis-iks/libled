@@ -46,10 +46,8 @@ bool File::CreateDirectory(const String &dirname) {
 String File::ReadAsText(const String &filename) {
   // Open the file
   std::ifstream stream(filename.c_str(), std::ios_base::in);
-  if (!stream.good()) {
-    std::cerr << "ReadAsText: Failed to open file: " << filename << std::endl;
+  if (!stream.good())
     throw std::ios_base::failure("Failed to open file.");
-  }
 
   // Determine the size of the file
   stream.seekg(0, std::ios::end);
