@@ -287,9 +287,17 @@ Font *Font::CreateBold() {
 Font *Font::LoadFromTTF(const String &filename, float fontSize,
                         int textureWidth, int textureHeight) {
   // Read TTF file content
-  std::string buffer = File::ReadAsText(filename).stl();
-  if (buffer.empty()) {
+  std::string buffer;
+  try {
+    buffer = File::ReadAsText(filename).stl();
+  } catch (...) {
     std::cout << "Failed to read TTF file: " << filename.c_str() << std::endl;
+    return nullptr;
+  }
+
+  if (buffer.empty()) {
+    std::cout << "Failed to read TTF file (empty): " << filename.c_str()
+              << std::endl;
     return nullptr;
   }
 

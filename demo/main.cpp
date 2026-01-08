@@ -20,6 +20,7 @@
 #include <memory>
 #include <unistd.h>
 #include <utils/Configuration.h>
+#include <utils/File.h>
 #include <utils/Font.h>
 #include <utils/ShaderUtils.h>
 #include <utils/Tools.h>
@@ -226,7 +227,7 @@ public:
     scaleTween = tweeny::from(startW).to(targetW).during(3000).via(
         easing::enumerated::cubicOut);
     opacityTween =
-        tweeny::from(0).to(204).during(3000).via(easing::enumerated::cubicOut);
+        tweeny::from(0).to(255).during(3000).via(easing::enumerated::cubicOut);
 
     // Setup flash tween similar to Unstoppable but triggered later
     flashTween = tweeny::from(0).to(0).during(1); // Placeholder init
@@ -913,7 +914,8 @@ int main(int argc, char *argv[]) {
   const Font &defaultFont = resources.GetFont("boldbitslarge.fnt");
 
   // Try loading TTF
-  Font *ttfFont = Font::LoadFromTTF("demo/assets/mleitod.ttf", 24.0f);
+  String ttfPath = File::CombinePath(config.DataPath().c_str(), "mleitod.ttf");
+  Font *ttfFont = Font::LoadFromTTF(ttfPath, 24.0f);
   const Font &font = (ttfFont) ? *ttfFont : defaultFont;
   if (ttfFont)
     std::cout << "Loaded TTF font!" << std::endl;
