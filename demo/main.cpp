@@ -28,6 +28,32 @@
 
 using namespace libled;
 
+// --- Console Input Helper ---
+#include <fcntl.h>
+#include <termios.h>
+
+struct termios orig_termios;
+void DisableRawMode() { tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios); }
+void EnableRawMode() {
+  tcgetattr(STDIN_FILENO, &orig_termios);
+  atexit(DisableRawMode);
+  struct termios raw = orig_termios;
+  raw.c_lflag &= ~(ECHO | ICANON);
+  tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
+
+  // Set non-blocking
+  int flags = fcntl(STDIN_FILENO, F_GETFL, 0);
+  fcntl(STDIN_FILENO, F_SETFL, flags | O_NONBLOCK);
+}
+
+bool KbHit() {
+  struct timeval tv = {0L, 0L};
+  fd_set fds;
+  FD_ZERO(&fds);
+  FD_SET(STDIN_FILENO, &fds);
+  return select(STDIN_FILENO + 1, &fds, NULL, NULL, &tv);
+}
+
 // --- Data Structures ---
 
 struct Scene {
@@ -900,6 +926,9 @@ void AddTransitionScenes(std::vector<Scene> &scenes) {
 // --- Main ---
 
 int main(int argc, char *argv[]) {
+  // Enable console input
+  EnableRawMode();
+
   std::cout << "Starting Demo App..." << std::endl;
   char cwd[1024];
   if (getcwd(cwd, sizeof(cwd)) != NULL) {
@@ -989,6 +1018,30 @@ int main(int argc, char *argv[]) {
         }
       }
       lastKey = key;
+
+      // Console Input
+      if (KbHit()) {
+        char c = getchar();
+        if (c == 'n') {
+          // Next
+          currentScene++;
+          if (currentScene >= (int)scenes.size())
+            currentScene = 0;
+          std::cout << "Switching to: " << scenes[currentScene].name
+                    << std::endl;
+          Resources::GetResources().GetSound("woosh.wav").Play();
+        } else if (c == 'p') {
+          // Previous
+          currentScene--;
+          if (currentScene < 0)
+            currentScene = scenes.size() - 1;
+          std::cout << "Switching to: " << scenes[currentScene].name
+                    << std::endl;
+          Resources::GetResources().GetSound("woosh.wav").Play();
+        } else if (c == 'q') {
+          break;
+        }
+      }
 
       // Render
       canvas.Clear(BLACK);
