@@ -50,6 +50,7 @@ public:
         : center(c), color(col), count(numParticles), triggered(false), lastUpdate(0) {}
     virtual void Render(Canvas& canvas, uint32_t timeMs) override;
     void Trigger();
+    bool IsFinished() const;
 };
 
 class FireworksEffect : public IEffect

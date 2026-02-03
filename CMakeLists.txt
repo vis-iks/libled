@@ -114,3 +114,7 @@ add_custom_command(TARGET led POST_BUILD
 )
 
 add_subdirectory(demo)
+
+# --- BENCHMARK ---
+add_executable(benchmark_fireworks benchmarks/benchmark_fireworks.cpp)
+target_link_libraries(benchmark_fireworks PRIVATE led)
