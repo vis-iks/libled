@@ -105,6 +105,14 @@ void ExplosionEffect::Render(Canvas& canvas, uint32_t timeMs) {
     }
 }
 
+bool ExplosionEffect::IsFinished() const {
+    if(!triggered) return false;
+    for(const auto& p : particles) {
+        if(p.life > 0) return false;
+    }
+    return true;
+}
+
 // --- FIREWORKS ---
 void FireworksEffect::Render(Canvas& canvas, uint32_t timeMs) {
     if(lastUpdate == 0) lastUpdate = timeMs;
@@ -151,11 +159,24 @@ void FireworksEffect::Render(Canvas& canvas, uint32_t timeMs) {
     }
     
     // Clean rockets
-    // Note: Omitted standard cleanup for demo brevity
+    for(size_t i=0; i<rockets.size(); ) {
+        if(rockets[i].exploded) {
+            rockets[i] = rockets.back();
+            rockets.pop_back();
+        } else {
+            ++i;
+        }
+    }
     
     // Render Explosions
-    for(auto& exp : explosions) {
-        exp->Render(canvas, timeMs);
+    for(size_t i=0; i<explosions.size(); ) {
+        if(explosions[i]->IsFinished()) {
+            explosions[i] = explosions.back();
+            explosions.pop_back();
+        } else {
+            explosions[i]->Render(canvas, timeMs);
+            ++i;
+        }
     }
 }
 
