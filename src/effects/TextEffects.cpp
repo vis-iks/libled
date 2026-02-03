@@ -113,28 +113,18 @@ void TypewriterEffect::Render(Canvas& canvas, uint32_t timeMs)
     String fullStr = text.GetText();
     if (cursor > (int)fullStr.Length()) cursor = fullStr.Length();
     
-    // Hack: Create temp text? Or modify Text class?
-    // We can just use the provided text object and temporarily change its string
-    // But text object is const in constructor? No, it's a copy member.
-    // Wait, TypewriterEffect has "Text text;" member. It's not a reference.
-    // So we can modify it safely.
-    
-    String original = text.GetText();
-    text.SetText(original.Substring(0, cursor));
-    text.DrawOpaque(canvas, position, color);
+    text.DrawPartialOpaque(canvas, position, cursor, color);
     
     // Draw Blink Cursor
     if (cursor < (int)fullStr.Length()) {
          if ((timeMs / 250) % 2 == 0) { // Blink
-             Rect r = text.GetTextRect(position); // Returns rect of SUBSTRING now
+             Rect r = text.GetPartialTextRect(position, cursor);
              // We want cursor at end of substring.
-             // GetTextRect returns rect of current text content.
+             // GetPartialTextRect returns rect of partial text content.
              // So cursor is at r.x + r.width.
              canvas.DrawRectangle(Point(r.x + r.width + 1, r.y), Point(r.x + r.width + 2, r.y + r.height - 1), color, color);
          }
     }
-    
-    text.SetText(original); // Restore
 }
 
 void TextWaveEffect::Render(Canvas& canvas, uint32_t timeMs)
