@@ -45,6 +45,9 @@ private:
 	// This updates the arrangement of the characters for drawing
 	void Update();
 
+	// Calculate width of partial text
+	int GetPartialWidth(int length) const;
+
 public:
 
 	// Constructor/destructor
@@ -61,10 +64,12 @@ public:
 	inline void SetText(const String& text) { this->text = text; Update(); }
 	inline const Size& GetTextSize() const { return textsize; }
 	inline Rect GetTextRect(Point pos) const { return Rect(pos.Offset(offsetadjust), textsize); }
+	Rect GetPartialTextRect(Point pos, int length) const;
 	inline void SetCharSpacing(int pixels) { this->charspacing = pixels; Update(); }
 
 	// Drawing
 	void DrawOpaque(Canvas& canvas, Point pos, Color c) const;
+	void DrawPartialOpaque(Canvas& canvas, Point pos, int length, Color c) const;
 	void DrawBlend(Canvas& canvas, Point pos, Color c) const;
 	void DrawAdd(Canvas& canvas, Point pos, Color c) const;
 	void DrawMask(Canvas& canvas, Point pos, Color c) const;

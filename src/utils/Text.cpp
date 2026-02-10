@@ -79,6 +79,30 @@ void Text::Update()
 		tc.position = tc.position.Offset(offsetadjust);
 }
 
+int Text::GetPartialWidth(int length) const
+{
+	if(font == nullptr || text.IsEmpty() || length <= 0)
+		return 0;
+
+	int len = std::min(length, (int)text.Length());
+	int xpos = 0;
+	int i = 0;
+	for(byte c : text.stl())
+	{
+		if (i >= len) break;
+		FontChar fc = font->GetCharacter(c);
+		xpos += fc.advance + charspacing;
+		i++;
+	}
+	return xpos;
+}
+
+Rect Text::GetPartialTextRect(Point pos, int length) const
+{
+	int w = GetPartialWidth(length);
+	return Rect(pos.Offset(offsetadjust), Size(w, textsize.height));
+}
+
 void Text::DrawOpaque(Canvas& canvas, Point pos, Color c) const
 {
 	if(text.IsEmpty() || (font == nullptr))
@@ -94,6 +118,32 @@ void Text::DrawOpaque(Canvas& canvas, Point pos, Color c) const
 	{
 		for(const TextChar& tc : chars)
 			canvas.DrawMonoImage(tc.position.Offset(pos.x, pos.y), img, c, tc.imgrect);
+	}
+}
+
+void Text::DrawPartialOpaque(Canvas& canvas, Point pos, int length, Color c) const
+{
+	if(text.IsEmpty() || (font == nullptr) || length <= 0)
+		return;
+
+	const Image& img = font->GetImage();
+
+	int count = 0;
+	if(img.HasColors())
+	{
+		for(const TextChar& tc : chars) {
+			if (count >= length) break;
+			canvas.DrawColorImage(tc.position.Offset(pos.x, pos.y), img, tc.imgrect);
+			count++;
+		}
+	}
+	else
+	{
+		for(const TextChar& tc : chars) {
+			if (count >= length) break;
+			canvas.DrawMonoImage(tc.position.Offset(pos.x, pos.y), img, c, tc.imgrect);
+			count++;
+		}
 	}
 }
 
